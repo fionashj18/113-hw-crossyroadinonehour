@@ -1,5 +1,5 @@
 I wanted to see how much Claude could do in one prompt. 
-The pygame wasn't working at first, so I fixed the bugs manually. 
+The pygame wasn't working at first, so I fixed the bugs manually(which took a while). 
 I used Claude and pygame.
 This is what I prompted Claude: 
 Can you make a 2d crossy road written in python?
