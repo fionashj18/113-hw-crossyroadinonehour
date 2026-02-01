@@ -6,7 +6,7 @@ import pygame
 from enum import Enum, auto
 
 from settings import (
-    LANE_DEFS, ROWS, GRID_SIZE,
+    LANE_DEFS, ROWS, GRID_SIZE, SCREEN_WIDTH,
     SCORE_PER_ROW, SCORE_WIN_BONUS, TIME_PENALTY_PER_SEC,
 )
 from player import Player
@@ -53,6 +53,7 @@ class Game:
 
         self.score       = 0.0
         self._prev_max   = 0   # to award row-advance points
+        self._river_grace = 0.0  # grace timer: don't drown for a short window after stepping onto river
 
     # ── event handling ────────────────────────────────────
     def handle_event(self, event: pygame.event.Event):
@@ -126,20 +127,30 @@ class Game:
         p_rect_small = p_rect.inflate(-shrink * 2, -shrink * 2)
 
         for obs in self.obstacles:
+            # Logs are rideable — never kill the player on collision
+            if isinstance(obs, Log):
+                continue
             if p_rect_small.colliderect(obs.get_rect()):
                 self.state = State.DEAD
                 self._finalise_score()
                 return
 
-        # ── River drowning: if on river row and NOT on a log, die ──
+        # ── River drowning ────────────────────────────────
         lane_type = LANE_DEFS[self.player.row][0] if self.player.row < len(LANE_DEFS) else "grass"
-        if lane_type == "river" and not self._on_any_log():
-            # Give a tiny grace window — only kill if truly in the open
-            # (player just stepped onto river with no log under)
-            if not self.player._moving:
-                self.state = State.DEAD
-                self._finalise_score()
-                return
+        if lane_type == "river":
+            if self._on_any_log():
+                # Safe — reset grace timer
+                self._river_grace = 0.5
+            else:
+                # Not on a log — count down grace period
+                self._river_grace -= dt
+                if self._river_grace <= 0 and not self.player._moving:
+                    self.state = State.DEAD
+                    self._finalise_score()
+                    return
+        else:
+            # Reset grace whenever we leave the river
+            self._river_grace = 0.5
 
         # ── Scoring ───────────────────────────────────────
         if self.player.max_row > self._prev_max:
@@ -167,15 +178,18 @@ class Game:
                 continue
             if obs.row != self.player.row:
                 continue
-            # Check if player is horizontally within the log
+            # Check if player centre is horizontally within the log
             p_cx = self.player.px + GRID_SIZE // 2
             if obs.x <= p_cx <= obs.x + obs.w:
                 # Ride the log
                 move = obs.direction * obs.speed * dt
                 self.player.px += move
                 self.player._target_x += move
+                self.player._start_x += move
+                # Keep col in sync so the next move starts from the right grid pos
+                self.player.col = int((self.player.px + GRID_SIZE // 2) / GRID_SIZE)
                 # Push off-screen → die
-                if self.player.px < -GRID_SIZE or self.player.px > GRID_SIZE * 11:
+                if self.player.px < -GRID_SIZE or self.player.px > SCREEN_WIDTH:
                     self.state = State.DEAD
                     self._finalise_score()
                 return

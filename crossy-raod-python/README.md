@@ -1,0 +1,1 @@
+run python3 main.py in terminal to run game

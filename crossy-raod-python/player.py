@@ -24,6 +24,8 @@ class Player:
         self._target_x, self._target_y = self._grid_to_px(self.col, self.row)
         self.px = self._target_x
         self.py = self._target_y
+        self._start_x = self.px
+        self._start_y = self.py
 
         # Animation / input cooldown
         self._moving        = False
@@ -54,6 +56,10 @@ class Player:
         if new_row < 0 or new_row >= ROWS:
             return
 
+        # Save the start position before updating the target
+        self._start_x = self.px
+        self._start_y = self.py
+
         self.col = new_col
         self.row = new_row
         self.facing = direction
@@ -75,12 +81,9 @@ class Player:
             # Ease-out quad
             t_ease = 1 - (1 - t) ** 2
 
-            start_x = self._target_x - (self.col - (self.col - (1 if self.facing == "right" else -1 if self.facing == "left" else 0))) * GRID_SIZE
-            start_y = self._target_y + (1 if self.facing == "up" else -1 if self.facing == "down" else 0) * GRID_SIZE
-
-            # Simpler: lerp from previous pixel pos saved at move start
-            self.px += (self._target_x - self.px) * min(dt / max(STEP_DURATION - self._move_timer + dt, 0.001), 1.0)
-            self.py += (self._target_y - self.py) * min(dt / max(STEP_DURATION - self._move_timer + dt, 0.001), 1.0)
+            # Lerp from saved start position to target
+            self.px = self._start_x + (self._target_x - self._start_x) * t_ease
+            self.py = self._start_y + (self._target_y - self._start_y) * t_ease
 
             if t >= 1.0:
                 self.px = self._target_x
