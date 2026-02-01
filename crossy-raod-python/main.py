@@ -15,7 +15,7 @@ Controls:
     R               -> Restart (after game over)
     Q / ESC         -> Quit
 
-GitHub: https://github.com/yourusername/crossy-road-python
+GitHub: https://github.com/fionashj18/113-hw-crossyroadinonehour
 """
 
 import sys
